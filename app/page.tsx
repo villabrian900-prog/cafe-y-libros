@@ -1,65 +1,696 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useEffect, useState } from "react";
+
+export default function CafeYLibrosWebsite() {
+  const books = [
+    {
+      title: "The Hacienda",
+      author: "Isabel Cañas",
+      genre: "Gothic",
+      rating: 4.1,
+      image:
+        "https://covers.openlibrary.org/b/id/12748381-L.jpg",
+    },
+    {
+      title: "Shuggie Bain",
+      author: "Douglas Stuart",
+      genre: "Literary Fiction",
+      rating: 4.6,
+      image:
+        "https://covers.openlibrary.org/b/id/9271540-L.jpg",
+    },
+    {
+      title: "Never Let Me Go",
+      author: "Kazuo Ishiguro",
+      genre: "Dystopian",
+      rating: 4.2,
+      image:
+        "https://covers.openlibrary.org/b/id/1047334-L.jpg",
+    },
+    {
+      title: "The Brief Wondrous Life of Oscar Wao",
+      author: "Junot Díaz",
+      genre: "Historical",
+      rating: 4.3,
+      image:
+        "https://covers.openlibrary.org/b/id/12451659-L.jpg",
+    },
+  ];
+
+  const previousBooks = [
+    {
+      title: "The Last Thing He Told Me",
+      author: "Laura Dave",
+      date: "May 2026",
+      genre: "Mystery / Thriller",
+      image: "https://covers.openlibrary.org/b/id/10571017-L.jpg",
+    },
+    {
+      title: "The Measure",
+      author: "Nikki Erlick",
+      date: "Apr 2026",
+      genre: "Literary / Speculative",
+      image: "https://m.media-amazon.com/images/I/91yNb85Z9FL._AC_UF1000,1000_QL80_.jpg",
+    },
+    {
+      title: "Half his Age",
+      author: "Jennette McCurdy",
+      date: "Mar 2026",
+      genre: "Memoir",
+      image: "https://m.media-amazon.com/images/I/91dhTPXQpkL.jpg_BO30,255,255,255_UF750,750_SR1910,1000,0,C_QL100_.jpg",
+    },
+    {
+      title: "Love in the Time of Cholera",
+      author: "Gabriel García Márquez",
+      date: "Feb 2026",
+      genre: "Literary Fiction",
+      image: "https://covers.openlibrary.org/b/id/10518348-L.jpg",
+    },
+    {
+      title: "Tender is the Flesh",
+      author: "Agustina Bazterrica",
+      date: "Jan 2026",
+      genre: "Dystopian",
+      image: "https://covers.openlibrary.org/b/id/10330829-L.jpg",
+    },
+    {
+      title: "All Sinners Bleed",
+      author: "S.A. Cosby",
+      date: "Dec 2025",
+      genre: "Crime",
+      image: "https://covers.openlibrary.org/b/id/13478757-L.jpg",
+    },
+    {
+      title: "The Curious Incident of the Dog in the Night-Time",
+      author: "Mark Haddon",
+      date: "Nov 2025",
+      genre: "Mystery",
+      image: "https://covers.openlibrary.org/b/id/12473709-L.jpg",
+    },
+    {
+      title: "The Long Walk",
+      author: "Stephen King",
+      date: "Oct 2025",
+      genre: "Dystopian",
+      image: "https://covers.openlibrary.org/b/id/14653609-L.jpg",
+    },
+    {
+      title: "The Way of Integrity",
+      author: "Martha Beck",
+      date: "Sep 2025",
+      genre: "Self-help",
+      image: "https://covers.openlibrary.org/b/id/10861592-L.jpg",
+    },
+    {
+      title: "Fight Club",
+      author: "Chuck Palahniuk",
+      date: "Aug 2025",
+      genre: "Literary Fiction",
+      image: "https://covers.openlibrary.org/b/id/7890578-L.jpg",
+    },
+  ];
+
+  const [previousPage, setPreviousPage] = useState(0);
+  const visiblePreviousBooks = previousBooks.slice(previousPage * 3, previousPage * 3 + 3);
+
+  const genreCounts = previousBooks.reduce<Record<string, number>>((acc, book) => {
+    const genre = book.genre || "Other";
+    acc[genre] = (acc[genre] || 0) + 1;
+    return acc;
+  }, {});
+
+  const analyticsItems = Object.entries(genreCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([label, count]) => ({
+      label,
+      width: `${Math.round((count / previousBooks.length) * 100)}%`,
+    }));
+
+  const memberThoughts = [
+    {
+      quote:
+        "A cozy space for deep conversations, coffee, and stories that stay with you long after the last page.",
+      name: "Brian",
+    },
+    {
+      quote:
+        "Every meeting feels like a literary café adventure across New Jersey.",
+      name: "Jorge",
+    },
+    {
+      quote:
+        "The discussions here completely changed how I experience books.",
+      name: "Ross",
+    },
+  ];
+
+  const genres = [
+    "Mystery",
+    "Thriller",
+    "Literary Fiction",
+    "Romance",
+    "Fantasy",
+    "Historical Fiction",
+  ];
+
+  // --- Voting and membership local state (persisted to localStorage) ---
+  const [members, setMembers] = useState<any[]>([]);
+
+  useEffect(() => {
+    try {
+      const m = localStorage.getItem("cafeylibros_members");
+      if (m) setMembers(JSON.parse(m));
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  function getVotes(): any {
+    try {
+      const s = localStorage.getItem("cafeylibros_votes");
+      return s ? JSON.parse(s) : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveVotes(v: any) {
+    localStorage.setItem("cafeylibros_votes", JSON.stringify(v));
+  }
+
+  function saveMembers(m: any) {
+    localStorage.setItem("cafeylibros_members", JSON.stringify(m));
+    setMembers(m);
+  }
+
+  function addMember(member: any) {
+    const next = [...members, member];
+    saveMembers(next);
+  }
+
+  // membership form state
+  const [memberName, setMemberName] = useState("");
+  const [memberEmail, setMemberEmail] = useState("");
+  const [memberGenre, setMemberGenre] = useState("");
+
+  function handleMemberSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!memberName.trim() || !memberEmail.trim()) {
+      alert("Please provide your name and email to join.");
+      return;
+    }
+
+    // prevent duplicate member by email
+    const exists = members.some((m) => m.email === memberEmail.trim());
+    if (exists) {
+      alert("This email is already registered.");
+      return;
+    }
+
+    addMember({ name: memberName.trim(), email: memberEmail.trim(), genre: memberGenre.trim(), ts: Date.now() });
+    setMemberName("");
+    setMemberEmail("");
+    setMemberGenre("");
+    alert("Thanks — you've been added to the membership list.");
+  }
+
+  function VoteCard({ book }: { book: any }) {
+    const [count, setCount] = useState(0);
+    const [showForm, setShowForm] = useState(false);
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
+
+    useEffect(() => {
+      const votes: any = getVotes();
+      setCount(votes[book.title]?.length || 0);
+    }, []);
+
+    function handleVoteSubmit(e: React.FormEvent<HTMLFormElement>) {
+      e.preventDefault();
+      if (!name.trim() || !email.trim()) {
+        alert("Please enter name and email to vote.");
+        return;
+      }
+
+      const votes: any = getVotes();
+      // prevent duplicate vote by email across any book
+      const already = Object.values(votes).flat().some((v: any) => v.email === email.trim());
+      if (already) {
+        alert("This email has already voted.");
+        return;
+      }
+
+      votes[book.title] = votes[book.title] || [];
+      votes[book.title].push({ name: name.trim(), email: email.trim(), ts: Date.now() });
+      saveVotes(votes);
+      setCount(votes[book.title].length);
+      setShowForm(false);
+      setName("");
+      setEmail("");
+    }
+
+    return (
+      <div className="bg-white rounded-3xl overflow-hidden shadow-xl border border-[#d8c2ab] p-0">
+        <div className="h-72 bg-[#f5efe6] p-6 flex items-center justify-center overflow-hidden">
+          <img src={book.image} alt={`${book.title} cover`} className="max-h-full w-auto object-contain" />
+        </div>
+        <div className="p-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="text-xl font-bold">{book.title}</h3>
+              <p className="italic text-sm">{book.author}</p>
+            </div>
+
+            <div className="text-right">
+              <div className="bg-[#eadfce] px-3 py-1 rounded-full text-sm">⭐ {book.rating}</div>
+              <div className="text-xs text-[#8b5e3c] mt-2">Votes: {count}</div>
+            </div>
+          </div>
+
+          {!showForm ? (
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => setShowForm(true)}
+                className="bg-[#4b2e1f] text-white px-4 py-2 rounded-xl"
+              >
+                Vote
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleVoteSubmit} className="mt-4 space-y-3">
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name"
+                className="w-full px-4 py-2 rounded-2xl border"
+              />
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email address"
+                className="w-full px-4 py-2 rounded-2xl border"
+              />
+
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                  className="px-4 py-2 rounded-2xl border"
+                >
+                  Cancel
+                </button>
+
+                <button type="submit" className="bg-[#4b2e1f] text-white px-4 py-2 rounded-2xl">
+                  Confirm Vote
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="min-h-screen bg-[#f5efe6] text-[#4b2e1f] font-serif">
+      {/* HERO */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1600')] bg-cover bg-center opacity-15"></div>
+
+        <div className="relative z-10 max-w-7xl mx-auto px-6 py-20">
+          <div className="grid md:grid-cols-2 gap-10 items-center">
+            <div>
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-20 h-20 rounded-full bg-white shadow-xl flex items-center justify-center border-4 border-[#6f4e37]">
+                  <span className="text-3xl">☕</span>
+                </div>
+
+                <div>
+                  <h1 className="text-5xl font-bold tracking-tight">
+                    Café y Libros
+                  </h1>
+                  <p className="text-lg text-[#6f4e37]">
+                    Literary Society
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-xl leading-relaxed mb-8">
+                Book lovers. Deep talkers. Café sippers.
+                <br />
+                A literary society for curious and innovative souls across New
+                Jersey.
+              </p>
+
+              <div className="flex flex-wrap gap-4">
+                <a
+                  href="https://www.instagram.com/cafeylibrosls/"
+                  target="_blank"
+                  className="bg-[#6f4e37] hover:bg-[#5c3f2d] text-white px-6 py-3 rounded-2xl shadow-lg transition"
+                >
+                  Instagram
+                </a>
+
+                <a
+                  href="https://fable.co/fabler/jorge-382671359561?tab=stats"
+                  target="_blank"
+                  className="border-2 border-[#6f4e37] px-6 py-3 rounded-2xl hover:bg-[#eadfce] transition"
+                >
+                  Join on Fable
+                </a>
+              </div>
+            </div>
+
+            <div className="bg-white/80 backdrop-blur rounded-3xl shadow-2xl p-8 border border-[#d7c2a8]">
+              <h2 className="text-3xl font-bold mb-4">
+                Next Monthly Meetup
+              </h2>
+
+              <div className="space-y-2 text-lg">
+                <p>
+                  <span className="font-semibold">Book:</span>{" "}
+                  The Last Thing He Told Me
+                </p>
+                <p>
+                  <span className="font-semibold">Date:</span> May 17, 2026
+                </p>
+                <p>
+                  <span className="font-semibold">Time:</span> Sunday at 1 PM
+                </p>
+                <p>
+                  <span className="font-semibold">Location:</span> TBD Coffee
+                  Shop, NJ
+                </p>
+              </div>
+
+              <div className="mt-6 flex items-center gap-4">
+                <div className="h-36 w-24 bg-[#f5efe6] rounded-xl shadow-lg flex items-center justify-center overflow-hidden">
+                  <img
+                    src="https://covers.openlibrary.org/b/id/10571017-M.jpg"
+                    alt="The Last Thing He Told Me cover"
+                    className="max-h-full w-auto object-contain"
+                  />
+                </div>
+
+                <div>
+                  <p className="text-sm uppercase tracking-wider text-[#8b5e3c]">
+                    Current Read
+                  </p>
+                  <h3 className="text-2xl font-bold">
+                    The Last Thing He Told Me
+                  </h3>
+                  <p className="italic">Laura Dave</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* STATS */}
+      <section className="max-w-7xl mx-auto px-6 py-14">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+          {[
+            { label: "Total Members", value: "15" },
+            { label: "Books Reviewed", value: `${previousBooks.length}` },
+            { label: "May Attendance", value: "5" },
+          ].map((item, index) => (
+            <div
+              key={index}
+              className="bg-white rounded-3xl p-8 shadow-lg border border-[#d8c2ab]"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+              <p className="text-4xl font-bold mb-2">{item.value}</p>
+              <p className="text-[#7a5b45]">{item.label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* LAST MEETUP SUMMARY */}
+      <section className="max-w-7xl mx-auto px-6 py-16">
+        <div className="bg-[#f7efe4] rounded-3xl p-10 shadow-xl border border-[#d8c2ab]">
+          <p className="text-sm uppercase tracking-[0.3em] text-[#8b5e3c] mb-4">
+            Last Meetup Review
           </p>
+          <h2 className="text-4xl font-bold mb-4">The Last Thing He Told Me</h2>
+
+          <div className="mb-6 flex flex-col lg:flex-row items-start lg:items-center gap-8">
+            <div className="h-72 w-52 overflow-hidden rounded-3xl bg-white shadow-sm border border-[#e1d3c2] flex items-center justify-center">
+              <img
+                src="https://covers.openlibrary.org/b/id/10571017-L.jpg"
+                alt="The Last Thing He Told Me cover"
+                className="h-full w-auto object-contain"
+              />
+            </div>
+            <p className="text-lg leading-relaxed text-[#5c4a33] max-w-3xl">
+              Our latest read met at Ayala Coffee in Union, NJ. The book earned a community rating of <strong>2.0</strong> and <strong>5 people</strong> joined the discussion. Members also felt the story was very one-note and that the characters came across as flat.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-[#e1d3c2]">
+              <p className="text-3xl font-bold">2.0</p>
+              <p className="text-sm text-[#7a5b45]">Overall Rating</p>
+            </div>
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-[#e1d3c2]">
+              <p className="text-3xl font-bold">5</p>
+              <p className="text-sm text-[#7a5b45]">Attendees</p>
+            </div>
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-[#e1d3c2] col-span-2">
+              <p className="text-xl font-bold">Ayala Coffee</p>
+              <p className="text-sm text-[#7a5b45]">Union, NJ</p>
+            </div>
+          </div>
+
+          <p className="text-sm text-[#5c4a33]">Average rating is based only on the books we read, not voting card selections. May attendance reflects the number of members who joined the May meetup.</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+      </section>
+
+      {/* CURRENT BOOK PICKS */}
+      <section className="max-w-7xl mx-auto px-6 py-16">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-4xl font-bold">Vote for Next Month's Read</h2>
+            <p className="text-[#6f4e37] mt-2">Members: pick one of these four books.</p>
+          </div>
+        </div>
+
+        {/* Voter input + cards */}
+        <div className="mb-6">
+          <p className="text-sm text-[#6f4e37]">Choose a book and submit your vote directly on its card.</p>
+        </div>
+
+        <div className="grid md:grid-cols-4 gap-8">
+          {books.map((book, index) => (
+            <VoteCard key={index} book={book} />
+          ))}
+        </div>
+      </section>
+
+      {/* PREVIOUS READS */}
+      <section className="max-w-7xl mx-auto px-6 py-16">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
+          <div>
+            <h2 className="text-4xl font-bold">Previous Reads</h2>
+            <p className="text-[#6f4e37] mt-2">Books we've read at past meetups.</p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setPreviousPage((p) => Math.max(p - 1, 0))}
+              disabled={previousPage === 0}
+              className="inline-flex items-center justify-center w-12 h-12 rounded-full border border-[#d8c2ab] bg-white text-[#4b2e1f] disabled:opacity-40"
+            >
+              ←
+            </button>
+            <span className="text-sm text-[#6f4e37]">
+              Showing {previousPage * 3 + 1}–{Math.min((previousPage + 1) * 3, previousBooks.length)} of {previousBooks.length}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPreviousPage((p) => Math.min(p + 1, Math.floor((previousBooks.length - 1) / 3)))}
+              disabled={(previousPage + 1) * 3 >= previousBooks.length}
+              className="inline-flex items-center justify-center w-12 h-12 rounded-full border border-[#d8c2ab] bg-white text-[#4b2e1f] disabled:opacity-40"
+            >
+              →
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {visiblePreviousBooks.map((b, i) => (
+            <div
+              key={i}
+              className="bg-white rounded-3xl overflow-hidden shadow-xl border border-[#d8c2ab]"
+            >
+              <div className="h-64 bg-[#f5efe6] p-6 flex items-center justify-center overflow-hidden">
+                <img src={b.image} alt={`${b.title} cover`} className="max-h-full w-auto object-contain" />
+              </div>
+
+              <div className="p-6">
+                <h3 className="text-lg font-bold">{b.title}</h3>
+                <p className="italic text-sm">{b.author}</p>
+                <p className="text-[#8b5e3c] text-sm mt-2">Read: {b.date}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* MEMBER THOUGHTS */}
+      <section className="bg-[#e8dbc9] py-20">
+        <div className="max-w-7xl mx-auto px-6">
+          <h2 className="text-4xl font-bold text-center mb-12">
+            What Members Are Saying
+          </h2>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {memberThoughts.map((thought, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-3xl p-8 shadow-lg relative"
+              >
+                <div className="text-6xl absolute top-4 left-6 text-[#d7c2a8]">
+                  “
+                </div>
+
+                <p className="text-lg leading-relaxed relative z-10 pt-8">
+                  {thought.quote}
+                </p>
+
+                <p className="mt-6 font-bold text-[#6f4e37]">
+                  — {thought.name}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* GENRES */}
+      <section className="max-w-7xl mx-auto px-6 py-20">
+        <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div>
+            <h2 className="text-4xl font-bold mb-6">
+              Genres We've Explored
+            </h2>
+
+            <p className="text-lg leading-relaxed mb-8">
+              From thrillers and literary fiction to fantasy and romance,
+              Café y Libros celebrates stories from every genre.
+            </p>
+
+            <div className="flex flex-wrap gap-4">
+              {genres.map((genre, index) => (
+                <span
+                  key={index}
+                  className="bg-white border border-[#d7c2a8] px-5 py-3 rounded-full shadow"
+                >
+                  {genre}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-3xl shadow-xl p-8 border border-[#d7c2a8]">
+            <h3 className="text-3xl font-bold mb-8">
+              Community Analytics
+            </h3>
+
+            <div className="space-y-6">
+              {analyticsItems.map((item, index) => (
+                <div key={index}>
+                  <div className="flex justify-between mb-2">
+                    <span>{item.label}</span>
+                    <span>{item.width}</span>
+                  </div>
+
+                  <div className="w-full bg-[#eadfce] rounded-full h-4">
+                    <div
+                      className="bg-[#6f4e37] h-4 rounded-full"
+                      style={{ width: item.width }}
+                    ></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* MEMBER SIGN UP */}
+      <section className="bg-[#4b2e1f] text-white py-20">
+        <div className="max-w-3xl mx-auto px-6 text-center">
+          <h2 className="text-5xl font-bold mb-6">
+            Join Café y Libros
+          </h2>
+
+          <p className="text-xl mb-10 text-[#f3e8dc]">
+            Become part of a growing literary community exploring books and
+            coffee shops throughout New Jersey.
+          </p>
+
+          <form onSubmit={handleMemberSubmit} className="grid md:grid-cols-2 gap-4">
+            <input
+              value={memberName}
+              onChange={(e) => setMemberName(e.target.value)}
+              placeholder="Full Name"
+              className="px-5 py-4 rounded-2xl text-white placeholder-white/70 bg-[#3a2b20]"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+            <input
+              value={memberEmail}
+              onChange={(e) => setMemberEmail(e.target.value)}
+              placeholder="Email Address"
+              className="px-5 py-4 rounded-2xl text-white placeholder-white/70 bg-[#3a2b20]"
+            />
+
+            <input
+              value={memberGenre}
+              onChange={(e) => setMemberGenre(e.target.value)}
+              placeholder="Favorite Genre"
+              className="px-5 py-4 rounded-2xl text-white placeholder-white/70 bg-[#3a2b20] md:col-span-2"
+            />
+
+            <button type="submit" className="bg-[#d7b899] hover:bg-[#c7a785] text-[#4b2e1f] font-bold py-4 rounded-2xl md:col-span-2 transition">
+              Become a Member
+            </button>
+          </form>
         </div>
-      </main>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="bg-[#2d1a12] text-[#f3e8dc] py-10">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div>
+            <h3 className="text-2xl font-bold">☕ Café y Libros</h3>
+            <p className="text-sm text-[#d6c2af]">
+              Literary Society • New Jersey
+            </p>
+          </div>
+
+          <div className="flex gap-6 text-lg">
+            <a
+              href="https://www.instagram.com/cafeylibrosls/"
+              target="_blank"
+              className="hover:text-[#d7b899]"
+            >
+              Instagram
+            </a>
+
+            <a
+              href="https://fable.co"
+              target="_blank"
+              className="hover:text-[#d7b899]"
+            >
+              Fable
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
