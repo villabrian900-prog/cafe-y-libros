@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function CafeYLibrosWebsite() {
   const books = [
@@ -195,26 +196,44 @@ export default function CafeYLibrosWebsite() {
   const [memberEmail, setMemberEmail] = useState("");
   const [memberGenre, setMemberGenre] = useState("");
 
-  function handleMemberSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!memberName.trim() || !memberEmail.trim()) {
-      alert("Please provide your name and email to join.");
-      return;
-    }
+  async function handleMemberSubmit(
+  e: React.FormEvent<HTMLFormElement>
+) {
+  e.preventDefault();
 
-    // prevent duplicate member by email
-    const exists = members.some((m) => m.email === memberEmail.trim());
-    if (exists) {
-      alert("This email is already registered.");
-      return;
-    }
-
-    addMember({ name: memberName.trim(), email: memberEmail.trim(), genre: memberGenre.trim(), ts: Date.now() });
-    setMemberName("");
-    setMemberEmail("");
-    setMemberGenre("");
-    alert("Thanks — you've been added to the membership list.");
+  if (!memberName.trim() || !memberEmail.trim()) {
+    alert("Please provide your name and email.");
+    return;
   }
+
+  const { data, error } = await supabase
+    .from("members")
+    .insert([
+      {
+        name: memberName.trim(),
+        email: memberEmail.trim(),
+        favorite_genre: memberGenre.trim(),
+      },
+    ]);
+
+  if (error) {
+    console.error(error);
+
+    if (error.message.includes("duplicate")) {
+      alert("This email is already registered.");
+    } else {
+      alert("Something went wrong.");
+    }
+
+    return;
+  }
+
+  alert("Welcome to Café y Libros!");
+
+  setMemberName("");
+  setMemberEmail("");
+  setMemberGenre("");
+}
 
   function VoteCard({ book }: { book: any }) {
     const [count, setCount] = useState(0);
@@ -227,29 +246,52 @@ export default function CafeYLibrosWebsite() {
       setCount(votes[book.title]?.length || 0);
     }, []);
 
-    function handleVoteSubmit(e: React.FormEvent<HTMLFormElement>) {
-      e.preventDefault();
-      if (!name.trim() || !email.trim()) {
-        alert("Please enter name and email to vote.");
-        return;
-      }
+   async function handleVoteSubmit(
+  e: React.FormEvent<HTMLFormElement>
+) {
+  e.preventDefault();
 
-      const votes: any = getVotes();
-      // prevent duplicate vote by email across any book
-      const already = Object.values(votes).flat().some((v: any) => v.email === email.trim());
-      if (already) {
-        alert("This email has already voted.");
-        return;
-      }
+  if (!name.trim() || !email.trim()) {
+    alert("Please enter your name and email.");
+    return;
+  }
 
-      votes[book.title] = votes[book.title] || [];
-      votes[book.title].push({ name: name.trim(), email: email.trim(), ts: Date.now() });
-      saveVotes(votes);
-      setCount(votes[book.title].length);
-      setShowForm(false);
-      setName("");
-      setEmail("");
-    }
+  // check if already voted
+  const { data: existingVotes } = await supabase
+    .from("votes")
+    .select("*")
+    .eq("voter_email", email.trim());
+
+  if (existingVotes && existingVotes.length > 0) {
+    alert("This email has already voted.");
+    return;
+  }
+
+  const { error } = await supabase
+    .from("votes")
+    .insert([
+      {
+        book_title: book.title,
+        voter_name: name.trim(),
+        voter_email: email.trim(),
+      },
+    ]);
+
+  if (error) {
+    console.error(error);
+    alert("Vote failed.");
+    return;
+  }
+
+  setCount(count + 1);
+
+  alert("Vote submitted!");
+
+  setShowForm(false);
+  setName("");
+  setEmail("");
+}
+    
 
     return (
       <div className="bg-white rounded-3xl overflow-hidden shadow-xl border border-[#d8c2ab] p-0">
