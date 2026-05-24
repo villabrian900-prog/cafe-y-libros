@@ -154,8 +154,8 @@ export default function CafeYLibrosWebsite() {
 
   const fetchRecommendedReads = async () => {
     const { data, error } = await supabase
-      .from("recommended_reads")
-      .select("id, recommender_name, recommender_email, title, author, genre, notes, created_at")
+      .from("book_recommendations")
+      .select("id, book_title, book_author, genre, notes, created_at")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -224,27 +224,29 @@ export default function CafeYLibrosWebsite() {
   async function handleRecommendSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    if (!recommenderName.trim() || !recommenderEmail.trim() || !recommendTitle.trim()) {
-      alert("Please provide your name, email, and a book title.");
+    if (!recommendTitle.trim()) {
+      alert("Please enter a book title to recommend.");
       return;
     }
 
-    const { error } = await supabase.from("recommended_reads").insert([
-      {
-        recommender_name: recommenderName.trim(),
-        recommender_email: recommenderEmail.trim(),
-        title: recommendTitle.trim(),
-        author: recommendAuthor.trim(),
-        genre: recommendGenre.trim(),
-        notes: recommendNotes.trim(),
-      },
-    ]);
+    const { error } = await supabase
+      .from("book_recommendations")
+      .insert([
+        {
+          book_title: recommendTitle.trim(),
+          book_author: recommendAuthor.trim(),
+          genre: recommendGenre.trim(),
+          notes: recommendNotes.trim(),
+        },
+      ]);
 
     if (error) {
       console.error(error);
-      alert("Could not submit your recommendation.");
+      alert("Recommendation failed.");
       return;
     }
+
+    alert("Recommendation submitted!");
 
     setRecommenderName("");
     setRecommenderEmail("");
@@ -376,18 +378,18 @@ export default function CafeYLibrosWebsite() {
           <p className="text-sm uppercase tracking-[0.3em] text-[#8b5e3c] mb-4">
             Last Meetup Review
           </p>
-          <h2 className="text-4xl font-bold mb-4">The Last Thing He Told Me</h2>
+          <h2 className="text-2xl font-bold mb-3">The Last Thing He Told Me</h2>
 
-          <div className="mb-6 flex flex-col lg:flex-row items-start lg:items-center gap-8">
-            <div className="h-72 w-52 overflow-hidden rounded-3xl bg-white shadow-sm border border-[#e1d3c2] flex items-center justify-center">
+          <div className="mb-6 flex flex-col lg:flex-row items-start lg:items-center gap-6">
+            <div className="h-56 w-40 overflow-hidden rounded-2xl bg-white shadow-sm border border-[#e1d3c2] flex items-center justify-center">
               <img
                 src="https://covers.openlibrary.org/b/id/10571017-L.jpg"
                 alt="The Last Thing He Told Me cover"
                 className="h-full w-auto object-contain"
               />
             </div>
-            <p className="text-lg leading-relaxed text-[#5c4a33] max-w-3xl">
-              Our latest read met at Ayala Coffee in Union, NJ. The book earned a community rating of <strong>2.0</strong> and <strong>5 people</strong> joined the discussion. Members also felt the story was very one-note and that the characters came across as flat.
+            <p className="text-base leading-relaxed text-[#5c4a33] max-w-2xl">
+              Our last meetup at Ayala Coffee (Union, NJ) had 5 attendees and an average community rating of <strong>2.0</strong>. The discussion flagged pacing and character depth as common notes.
             </p>
           </div>
 
@@ -414,8 +416,8 @@ export default function CafeYLibrosWebsite() {
       <section className="max-w-7xl mx-auto px-6 py-16">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-4xl font-bold">June Planning</h2>
-            <p className="text-[#6f4e37] mt-2">These cards are a placeholder for the June meetup while voting is paused until the next read cycle.</p>
+            <h2 className="text-3xl font-bold">Next Month Reads</h2>
+            <p className="text-[#6f4e37] mt-2">Suggest reads and prepare for next month's vote.</p>
           </div>
         </div>
 
@@ -507,30 +509,34 @@ export default function CafeYLibrosWebsite() {
               </div>
             ) : (
               <div className="space-y-4">
-                {[...defaultRecommendedReads, ...recommendedReads].map((item: any, index: number) => (
-                  <div key={index} className="rounded-3xl border border-[#d8c2ab] bg-white p-6 shadow-lg">
-                    <div className="flex items-start gap-4 mb-3">
-                      {item.image ? (
-                        <div className="h-16 w-12 overflow-hidden rounded-lg bg-[#f5efe6] flex items-center justify-center">
-                          <img src={item.image} alt={`${item.title} cover`} className="h-full w-auto object-contain" />
-                        </div>
-                      ) : null}
-
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between gap-4">
-                          <div>
-                            <h4 className="text-xl font-bold">{item.title}</h4>
-                            <p className="italic text-sm text-[#6f4e37]">{item.author || "Unknown author"}</p>
+                {[...defaultRecommendedReads, ...recommendedReads].map((item: any, index: number) => {
+                  const title = item.book_title || item.title || "Untitled";
+                  const author = item.book_author || item.author || "Unknown author";
+                  return (
+                    <div key={index} className="rounded-3xl border border-[#d8c2ab] bg-white p-6 shadow-lg">
+                      <div className="flex items-start gap-4 mb-3">
+                        {item.image ? (
+                          <div className="h-16 w-12 overflow-hidden rounded-lg bg-[#f5efe6] flex items-center justify-center">
+                            <img src={item.image} alt={`${title} cover`} className="h-full w-auto object-contain" />
                           </div>
-                          {item.created_at ? (
-                            <p className="text-xs uppercase text-[#8b5e3c]">{new Date(item.created_at).toLocaleDateString()}</p>
-                          ) : null}
+                        ) : null}
+
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between gap-4">
+                            <div>
+                              <h4 className="text-xl font-bold">{title}</h4>
+                              <p className="italic text-sm text-[#6f4e37]">{author}</p>
+                            </div>
+                            {item.created_at ? (
+                              <p className="text-xs uppercase text-[#8b5e3c]">{new Date(item.created_at).toLocaleDateString()}</p>
+                            ) : null}
+                          </div>
+                          {item.notes ? <p className="text-sm text-[#5c4a33] mt-3">{item.notes}</p> : null}
                         </div>
-                        {item.notes ? <p className="text-sm text-[#5c4a33] mt-3">{item.notes}</p> : <p className="text-sm text-[#6f4e37] mt-3">No note provided.</p>}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
