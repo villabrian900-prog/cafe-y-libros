@@ -125,19 +125,16 @@ export default function CafeYLibrosWebsite() {
     {
       title: "Shuggie Bain",
       author: "Douglas Stuart",
-      notes: "A May voting pick with a powerful, emotional story.",
       image: "https://covers.openlibrary.org/b/id/9271540-S.jpg",
     },
     {
       title: "Never Let Me Go",
       author: "Kazuo Ishiguro",
-      notes: "A literary favorite that many members recommended for its haunting atmosphere.",
       image: "https://covers.openlibrary.org/b/id/1047334-S.jpg",
     },
     {
       title: "The Brief Wondrous Life of Oscar Wao",
       author: "Junot Díaz",
-      notes: "A rich, genre-bending novel that was part of May's shortlist.",
       image: "https://covers.openlibrary.org/b/id/12451659-S.jpg",
     },
   ];
@@ -145,12 +142,11 @@ export default function CafeYLibrosWebsite() {
   // --- Voting and membership local state (persisted to localStorage) ---
   const [members, setMembers] = useState<any[]>([]);
   const [recommendedReads, setRecommendedReads] = useState<any[]>([]);
-  const [recommenderName, setRecommenderName] = useState("");
-  const [recommenderEmail, setRecommenderEmail] = useState("");
   const [recommendTitle, setRecommendTitle] = useState("");
   const [recommendAuthor, setRecommendAuthor] = useState("");
   const [recommendGenre, setRecommendGenre] = useState("");
   const [recommendNotes, setRecommendNotes] = useState("");
+  const [recPage, setRecPage] = useState(0);
 
   const fetchRecommendedReads = async () => {
     const { data, error } = await supabase
@@ -176,6 +172,25 @@ export default function CafeYLibrosWebsite() {
 
     fetchRecommendedReads();
   }, []);
+
+  // combined recommendations (defaults first, then DB results)
+  const combinedRecommendations = [...defaultRecommendedReads, ...recommendedReads];
+  const recPageCount = Math.max(1, Math.ceil(combinedRecommendations.length / 3));
+  const visibleRecommendations = combinedRecommendations.slice(recPage * 3, recPage * 3 + 3);
+
+  // auto-advance recommendations every 30s
+  useEffect(() => {
+    if (combinedRecommendations.length <= 3) return;
+    const id = setInterval(() => {
+      setRecPage((p) => (p + 1) % Math.ceil(combinedRecommendations.length / 3));
+    }, 30000);
+    return () => clearInterval(id);
+  }, [combinedRecommendations.length]);
+
+  // ensure current page is within bounds when data changes
+  useEffect(() => {
+    if (recPage >= recPageCount) setRecPage(0);
+  }, [recPageCount]);
 
   // membership form state
   const [memberName, setMemberName] = useState("");
@@ -248,8 +263,6 @@ export default function CafeYLibrosWebsite() {
 
     alert("Recommendation submitted!");
 
-    setRecommenderName("");
-    setRecommenderEmail("");
     setRecommendTitle("");
     setRecommendAuthor("");
     setRecommendGenre("");
@@ -444,20 +457,6 @@ export default function CafeYLibrosWebsite() {
 
             <form onSubmit={handleRecommendSubmit} className="space-y-4">
               <input
-                value={recommenderName}
-                onChange={(e) => setRecommenderName(e.target.value)}
-                placeholder="Your name"
-                className="w-full px-5 py-4 rounded-2xl border border-[#d8c2ab]"
-              />
-
-              <input
-                value={recommenderEmail}
-                onChange={(e) => setRecommenderEmail(e.target.value)}
-                placeholder="Your email"
-                className="w-full px-5 py-4 rounded-2xl border border-[#d8c2ab]"
-              />
-
-              <input
                 value={recommendTitle}
                 onChange={(e) => setRecommendTitle(e.target.value)}
                 placeholder="Book title"
@@ -503,40 +502,68 @@ export default function CafeYLibrosWebsite() {
               </p>
             </div>
 
-            {recommendedReads.length + defaultRecommendedReads.length === 0 ? (
+            {combinedRecommendations.length === 0 ? (
               <div className="rounded-3xl border border-[#d8c2ab] bg-white p-8 shadow-lg">
                 <p className="text-[#6f4e37]">No recommendations yet. Be the first to suggest a title.</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {[...defaultRecommendedReads, ...recommendedReads].map((item: any, index: number) => {
-                  const title = item.book_title || item.title || "Untitled";
-                  const author = item.book_author || item.author || "Unknown author";
-                  return (
-                    <div key={index} className="rounded-3xl border border-[#d8c2ab] bg-white p-6 shadow-lg">
-                      <div className="flex items-start gap-4 mb-3">
-                        {item.image ? (
-                          <div className="h-16 w-12 overflow-hidden rounded-lg bg-[#f5efe6] flex items-center justify-center">
-                            <img src={item.image} alt={`${title} cover`} className="h-full w-auto object-contain" />
-                          </div>
-                        ) : null}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setRecPage((p) => Math.max(p - 1, 0))}
+                      disabled={recPage === 0}
+                      className="inline-flex items-center justify-center w-10 h-10 rounded-full border border-[#d8c2ab] bg-white text-[#4b2e1f] disabled:opacity-40"
+                    >
+                      ←
+                    </button>
 
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between gap-4">
-                            <div>
-                              <h4 className="text-xl font-bold">{title}</h4>
-                              <p className="italic text-sm text-[#6f4e37]">{author}</p>
+                    <button
+                      type="button"
+                      onClick={() => setRecPage((p) => Math.min(p + 1, recPageCount - 1))}
+                      disabled={recPage >= recPageCount - 1}
+                      className="inline-flex items-center justify-center w-10 h-10 rounded-full border border-[#d8c2ab] bg-white text-[#4b2e1f] disabled:opacity-40"
+                    >
+                      →
+                    </button>
+                  </div>
+
+                  <div className="text-sm text-[#6f4e37]">
+                    Showing {recPage * 3 + 1}–{Math.min((recPage + 1) * 3, combinedRecommendations.length)} of {combinedRecommendations.length}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {visibleRecommendations.map((item: any, index: number) => {
+                    const title = item.book_title || item.title || "Untitled";
+                    const author = item.book_author || item.author || "Unknown author";
+                    return (
+                      <div key={index} className="rounded-3xl border border-[#d8c2ab] bg-white p-6 shadow-lg">
+                        <div className="flex items-start gap-4 mb-3">
+                          {item.image ? (
+                            <div className="h-16 w-12 overflow-hidden rounded-lg bg-[#f5efe6] flex items-center justify-center">
+                              <img src={item.image} alt={`${title} cover`} className="h-full w-auto object-contain" />
                             </div>
-                            {item.created_at ? (
-                              <p className="text-xs uppercase text-[#8b5e3c]">{new Date(item.created_at).toLocaleDateString()}</p>
-                            ) : null}
+                          ) : null}
+
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between gap-4">
+                              <div>
+                                <h4 className="text-xl font-bold">{title}</h4>
+                                <p className="italic text-sm text-[#6f4e37]">{author}</p>
+                              </div>
+                              {item.created_at ? (
+                                <p className="text-xs uppercase text-[#8b5e3c]">{new Date(item.created_at).toLocaleDateString()}</p>
+                              ) : null}
+                            </div>
+                            {item.notes ? <p className="text-sm text-[#5c4a33] mt-3">{item.notes}</p> : null}
                           </div>
-                          {item.notes ? <p className="text-sm text-[#5c4a33] mt-3">{item.notes}</p> : null}
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
