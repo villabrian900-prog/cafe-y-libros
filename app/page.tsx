@@ -4,41 +4,6 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 export default function CafeYLibrosWebsite() {
-  const books = [
-    {
-      title: "The Hacienda",
-      author: "Isabel Cañas",
-      genre: "Gothic",
-      rating: 4.1,
-      image:
-        "https://covers.openlibrary.org/b/id/12748381-L.jpg",
-    },
-    {
-      title: "Shuggie Bain",
-      author: "Douglas Stuart",
-      genre: "Literary Fiction",
-      rating: 4.6,
-      image:
-        "https://covers.openlibrary.org/b/id/9271540-L.jpg",
-    },
-    {
-      title: "Never Let Me Go",
-      author: "Kazuo Ishiguro",
-      genre: "Dystopian",
-      rating: 4.2,
-      image:
-        "https://covers.openlibrary.org/b/id/1047334-L.jpg",
-    },
-    {
-      title: "The Brief Wondrous Life of Oscar Wao",
-      author: "Junot Díaz",
-      genre: "Historical",
-      rating: 4.3,
-      image:
-        "https://covers.openlibrary.org/b/id/12451659-L.jpg",
-    },
-  ];
-
   const previousBooks = [
     {
       title: "The Last Thing He Told Me",
@@ -156,17 +121,41 @@ export default function CafeYLibrosWebsite() {
     "Historical Fiction",
   ];
 
+  const defaultRecommendedReads = [
+    {
+      title: "Shuggie Bain",
+      author: "Douglas Stuart",
+      notes: "A May voting pick with a powerful, emotional story.",
+      image: "https://covers.openlibrary.org/b/id/9271540-S.jpg",
+    },
+    {
+      title: "Never Let Me Go",
+      author: "Kazuo Ishiguro",
+      notes: "A literary favorite that many members recommended for its haunting atmosphere.",
+      image: "https://covers.openlibrary.org/b/id/1047334-S.jpg",
+    },
+    {
+      title: "The Brief Wondrous Life of Oscar Wao",
+      author: "Junot Díaz",
+      notes: "A rich, genre-bending novel that was part of May's shortlist.",
+      image: "https://covers.openlibrary.org/b/id/12451659-S.jpg",
+    },
+  ];
+
   // --- Voting and membership local state (persisted to localStorage) ---
   const [members, setMembers] = useState<any[]>([]);
   const [recommendedReads, setRecommendedReads] = useState<any[]>([]);
+  const [recommenderName, setRecommenderName] = useState("");
+  const [recommenderEmail, setRecommenderEmail] = useState("");
   const [recommendTitle, setRecommendTitle] = useState("");
   const [recommendAuthor, setRecommendAuthor] = useState("");
+  const [recommendGenre, setRecommendGenre] = useState("");
   const [recommendNotes, setRecommendNotes] = useState("");
 
   const fetchRecommendedReads = async () => {
     const { data, error } = await supabase
       .from("recommended_reads")
-      .select("id, title, author, notes, created_at")
+      .select("id, recommender_name, recommender_email, title, author, genre, notes, created_at")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -235,15 +224,18 @@ export default function CafeYLibrosWebsite() {
   async function handleRecommendSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    if (!recommendTitle.trim()) {
-      alert("Please enter a book title to recommend.");
+    if (!recommenderName.trim() || !recommenderEmail.trim() || !recommendTitle.trim()) {
+      alert("Please provide your name, email, and a book title.");
       return;
     }
 
     const { error } = await supabase.from("recommended_reads").insert([
       {
+        recommender_name: recommenderName.trim(),
+        recommender_email: recommenderEmail.trim(),
         title: recommendTitle.trim(),
         author: recommendAuthor.trim(),
+        genre: recommendGenre.trim(),
         notes: recommendNotes.trim(),
       },
     ]);
@@ -254,45 +246,15 @@ export default function CafeYLibrosWebsite() {
       return;
     }
 
+    setRecommenderName("");
+    setRecommenderEmail("");
     setRecommendTitle("");
     setRecommendAuthor("");
+    setRecommendGenre("");
     setRecommendNotes("");
 
     await fetchRecommendedReads();
   }
-
- function VoteCard({
-  book,
-}: {
-  book: any;
-}) {
-  return (
-    <div className="bg-white rounded-3xl overflow-hidden shadow-xl border border-[#d8c2ab] p-0">
-      <div className="h-72 bg-[#f5efe6] p-6 flex items-center justify-center overflow-hidden">
-        <img src={book.image} alt="" className="max-h-full w-auto object-contain" />
-      </div>
-
-      <div className="p-6">
-        <div className="flex justify-between">
-          <div>
-            <h3 className="text-xl font-bold">{book.title}</h3>
-            <p className="italic text-sm">{book.author}</p>
-          </div>
-
-          <div className="text-right">
-            <div className="bg-[#eadfce] px-3 py-1 rounded-full text-sm">
-              ⭐ {book.rating}
-            </div>
-          </div>
-        </div>
-
-        <p className="mt-4 text-sm text-[#6f4e37]">
-          Placeholder planning card for June. Voting is paused until the next read cycle opens.
-        </p>
-      </div>
-    </div>
-  );
-}
 
   return (
     <div className="min-h-screen bg-[#f5efe6] text-[#4b2e1f] font-serif">
@@ -462,10 +424,10 @@ export default function CafeYLibrosWebsite() {
           <p className="text-sm text-[#6f4e37]">This section is temporary copy until we reopen voting for the next book.</p>
         </div>
 
-        <div className="grid md:grid-cols-4 gap-8">
-          {books.map((book, index) => (
-            <VoteCard key={index} book={book} />
-          ))}
+        <div className="bg-white rounded-3xl p-10 shadow-xl border border-[#d8c2ab]">
+          <p className="text-lg text-[#6f4e37]">
+            The Hacienda is confirmed for June, so the May voting slate has been archived. Previous May contenders now appear in the recommended reads section above.
+          </p>
         </div>
       </section>
 
@@ -480,16 +442,37 @@ export default function CafeYLibrosWebsite() {
 
             <form onSubmit={handleRecommendSubmit} className="space-y-4">
               <input
+                value={recommenderName}
+                onChange={(e) => setRecommenderName(e.target.value)}
+                placeholder="Your name"
+                className="w-full px-5 py-4 rounded-2xl border border-[#d8c2ab]"
+              />
+
+              <input
+                value={recommenderEmail}
+                onChange={(e) => setRecommenderEmail(e.target.value)}
+                placeholder="Your email"
+                className="w-full px-5 py-4 rounded-2xl border border-[#d8c2ab]"
+              />
+
+              <input
                 value={recommendTitle}
                 onChange={(e) => setRecommendTitle(e.target.value)}
-                placeholder="Book Title"
+                placeholder="Book title"
                 className="w-full px-5 py-4 rounded-2xl border border-[#d8c2ab]"
               />
 
               <input
                 value={recommendAuthor}
                 onChange={(e) => setRecommendAuthor(e.target.value)}
-                placeholder="Author"
+                placeholder="Book author"
+                className="w-full px-5 py-4 rounded-2xl border border-[#d8c2ab]"
+              />
+
+              <input
+                value={recommendGenre}
+                onChange={(e) => setRecommendGenre(e.target.value)}
+                placeholder="Genre"
                 className="w-full px-5 py-4 rounded-2xl border border-[#d8c2ab]"
               />
 
@@ -518,24 +501,34 @@ export default function CafeYLibrosWebsite() {
               </p>
             </div>
 
-            {recommendedReads.length === 0 ? (
+            {recommendedReads.length + defaultRecommendedReads.length === 0 ? (
               <div className="rounded-3xl border border-[#d8c2ab] bg-white p-8 shadow-lg">
                 <p className="text-[#6f4e37]">No recommendations yet. Be the first to suggest a title.</p>
               </div>
             ) : (
               <div className="space-y-4">
-                {recommendedReads.map((item: any, index: number) => (
+                {[...defaultRecommendedReads, ...recommendedReads].map((item: any, index: number) => (
                   <div key={index} className="rounded-3xl border border-[#d8c2ab] bg-white p-6 shadow-lg">
-                    <div className="flex items-center justify-between mb-3 gap-4">
-                      <div>
-                        <h4 className="text-xl font-bold">{item.title}</h4>
-                        <p className="italic text-sm text-[#6f4e37]">{item.author || "Unknown author"}</p>
-                      </div>
-                      {item.created_at ? (
-                        <p className="text-xs uppercase text-[#8b5e3c]">{new Date(item.created_at).toLocaleDateString()}</p>
+                    <div className="flex items-start gap-4 mb-3">
+                      {item.image ? (
+                        <div className="h-16 w-12 overflow-hidden rounded-lg bg-[#f5efe6] flex items-center justify-center">
+                          <img src={item.image} alt={`${item.title} cover`} className="h-full w-auto object-contain" />
+                        </div>
                       ) : null}
+
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between gap-4">
+                          <div>
+                            <h4 className="text-xl font-bold">{item.title}</h4>
+                            <p className="italic text-sm text-[#6f4e37]">{item.author || "Unknown author"}</p>
+                          </div>
+                          {item.created_at ? (
+                            <p className="text-xs uppercase text-[#8b5e3c]">{new Date(item.created_at).toLocaleDateString()}</p>
+                          ) : null}
+                        </div>
+                        {item.notes ? <p className="text-sm text-[#5c4a33] mt-3">{item.notes}</p> : <p className="text-sm text-[#6f4e37] mt-3">No note provided.</p>}
+                      </div>
                     </div>
-                    {item.notes ? <p className="text-sm text-[#5c4a33]">{item.notes}</p> : <p className="text-sm text-[#6f4e37]">No note provided.</p>}
                   </div>
                 ))}
               </div>
