@@ -158,6 +158,24 @@ export default function CafeYLibrosWebsite() {
 
   // --- Voting and membership local state (persisted to localStorage) ---
   const [members, setMembers] = useState<any[]>([]);
+  const [recommendedReads, setRecommendedReads] = useState<any[]>([]);
+  const [recommendTitle, setRecommendTitle] = useState("");
+  const [recommendAuthor, setRecommendAuthor] = useState("");
+  const [recommendNotes, setRecommendNotes] = useState("");
+
+  const fetchRecommendedReads = async () => {
+    const { data, error } = await supabase
+      .from("recommended_reads")
+      .select("id, title, author, notes, created_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Failed to load recommended reads:", error);
+      return;
+    }
+
+    setRecommendedReads(data || []);
+  };
 
   useEffect(() => {
     try {
@@ -166,30 +184,9 @@ export default function CafeYLibrosWebsite() {
     } catch (e) {
       console.error(e);
     }
+
+    fetchRecommendedReads();
   }, []);
-
-  function getVotes(): any {
-    try {
-      const s = localStorage.getItem("cafeylibros_votes");
-      return s ? JSON.parse(s) : {};
-    } catch (e) {
-      return {};
-    }
-  }
-
-  function saveVotes(v: any) {
-    localStorage.setItem("cafeylibros_votes", JSON.stringify(v));
-  }
-
-  function saveMembers(m: any) {
-    localStorage.setItem("cafeylibros_members", JSON.stringify(m));
-    setMembers(m);
-  }
-
-  function addMember(member: any) {
-    const next = [...members, member];
-    saveMembers(next);
-  }
 
   // membership form state
   const [memberName, setMemberName] = useState("");
@@ -235,125 +232,67 @@ export default function CafeYLibrosWebsite() {
   setMemberGenre("");
 }
 
-  function VoteCard({ book }: { book: any }) {
-    const [count, setCount] = useState(0);
-    const [showForm, setShowForm] = useState(false);
-    const [name, setName] = useState("");
-    const [email, setEmail] = useState("");
+  async function handleRecommendSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
 
-    useEffect(() => {
-      const votes: any = getVotes();
-      setCount(votes[book.title]?.length || 0);
-    }, []);
+    if (!recommendTitle.trim()) {
+      alert("Please enter a book title to recommend.");
+      return;
+    }
 
-   async function handleVoteSubmit(
-  e: React.FormEvent<HTMLFormElement>
-) {
-  e.preventDefault();
-
-  if (!name.trim() || !email.trim()) {
-    alert("Please enter your name and email.");
-    return;
-  }
-
-  // check if already voted
-  const { data: existingVotes } = await supabase
-    .from("votes")
-    .select("*")
-    .eq("voter_email", email.trim());
-
-  if (existingVotes && existingVotes.length > 0) {
-    alert("This email has already voted.");
-    return;
-  }
-
-  const { error } = await supabase
-    .from("votes")
-    .insert([
+    const { error } = await supabase.from("recommended_reads").insert([
       {
-        book_title: book.title,
-        voter_name: name.trim(),
-        voter_email: email.trim(),
+        title: recommendTitle.trim(),
+        author: recommendAuthor.trim(),
+        notes: recommendNotes.trim(),
       },
     ]);
 
-  if (error) {
-    console.error(error);
-    alert("Vote failed.");
-    return;
+    if (error) {
+      console.error(error);
+      alert("Could not submit your recommendation.");
+      return;
+    }
+
+    setRecommendTitle("");
+    setRecommendAuthor("");
+    setRecommendNotes("");
+
+    await fetchRecommendedReads();
   }
 
-  setCount(count + 1);
+ function VoteCard({
+  book,
+}: {
+  book: any;
+}) {
+  return (
+    <div className="bg-white rounded-3xl overflow-hidden shadow-xl border border-[#d8c2ab] p-0">
+      <div className="h-72 bg-[#f5efe6] p-6 flex items-center justify-center overflow-hidden">
+        <img src={book.image} alt="" className="max-h-full w-auto object-contain" />
+      </div>
 
-  alert("Vote submitted!");
-
-  setShowForm(false);
-  setName("");
-  setEmail("");
-}
-    
-
-    return (
-      <div className="bg-white rounded-3xl overflow-hidden shadow-xl border border-[#d8c2ab] p-0">
-        <div className="h-72 bg-[#f5efe6] p-6 flex items-center justify-center overflow-hidden">
-          <img src={book.image} alt={`${book.title} cover`} className="max-h-full w-auto object-contain" />
-        </div>
-        <div className="p-6">
-          <div className="flex justify-between items-start">
-            <div>
-              <h3 className="text-xl font-bold">{book.title}</h3>
-              <p className="italic text-sm">{book.author}</p>
-            </div>
-
-            <div className="text-right">
-              <div className="bg-[#eadfce] px-3 py-1 rounded-full text-sm">⭐ {book.rating}</div>
-              <div className="text-xs text-[#8b5e3c] mt-2">Votes: {count}</div>
-            </div>
+      <div className="p-6">
+        <div className="flex justify-between">
+          <div>
+            <h3 className="text-xl font-bold">{book.title}</h3>
+            <p className="italic text-sm">{book.author}</p>
           </div>
 
-          {!showForm ? (
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={() => setShowForm(true)}
-                className="bg-[#4b2e1f] text-white px-4 py-2 rounded-xl"
-              >
-                Vote
-              </button>
+          <div className="text-right">
+            <div className="bg-[#eadfce] px-3 py-1 rounded-full text-sm">
+              ⭐ {book.rating}
             </div>
-          ) : (
-            <form onSubmit={handleVoteSubmit} className="mt-4 space-y-3">
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
-                className="w-full px-4 py-2 rounded-2xl border"
-              />
-              <input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email address"
-                className="w-full px-4 py-2 rounded-2xl border"
-              />
-
-              <div className="flex gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  className="px-4 py-2 rounded-2xl border"
-                >
-                  Cancel
-                </button>
-
-                <button type="submit" className="bg-[#4b2e1f] text-white px-4 py-2 rounded-2xl">
-                  Confirm Vote
-                </button>
-              </div>
-            </form>
-          )}
+          </div>
         </div>
+
+        <p className="mt-4 text-sm text-[#6f4e37]">
+          Placeholder planning card for June. Voting is paused until the next read cycle opens.
+        </p>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   return (
     <div className="min-h-screen bg-[#f5efe6] text-[#4b2e1f] font-serif">
@@ -413,37 +352,36 @@ export default function CafeYLibrosWebsite() {
               <div className="space-y-2 text-lg">
                 <p>
                   <span className="font-semibold">Book:</span>{" "}
-                  The Last Thing He Told Me
+                  The Hacienda
                 </p>
                 <p>
-                  <span className="font-semibold">Date:</span> May 17, 2026
+                  <span className="font-semibold">Date:</span> June 2026
                 </p>
                 <p>
                   <span className="font-semibold">Time:</span> Sunday at 1 PM
                 </p>
                 <p>
-                  <span className="font-semibold">Location:</span> TBD Coffee
-                  Shop, NJ
+                  <span className="font-semibold">Location:</span> Ayala Coffee, Union, NJ
                 </p>
               </div>
 
               <div className="mt-6 flex items-center gap-4">
                 <div className="h-36 w-24 bg-[#f5efe6] rounded-xl shadow-lg flex items-center justify-center overflow-hidden">
                   <img
-                    src="https://covers.openlibrary.org/b/id/10571017-M.jpg"
-                    alt="The Last Thing He Told Me cover"
+                    src="https://covers.openlibrary.org/b/id/12748381-M.jpg"
+                    alt="The Hacienda cover"
                     className="max-h-full w-auto object-contain"
                   />
                 </div>
 
                 <div>
                   <p className="text-sm uppercase tracking-wider text-[#8b5e3c]">
-                    Current Read
+                    Next Read
                   </p>
                   <h3 className="text-2xl font-bold">
-                    The Last Thing He Told Me
+                    The Hacienda
                   </h3>
-                  <p className="italic">Laura Dave</p>
+                  <p className="italic">Isabel Cañas</p>
                 </div>
               </div>
             </div>
@@ -514,20 +452,95 @@ export default function CafeYLibrosWebsite() {
       <section className="max-w-7xl mx-auto px-6 py-16">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-4xl font-bold">Vote for Next Month's Read</h2>
-            <p className="text-[#6f4e37] mt-2">Members: pick one of these four books.</p>
+            <h2 className="text-4xl font-bold">June Planning</h2>
+            <p className="text-[#6f4e37] mt-2">These cards are a placeholder for the June meetup while voting is paused until the next read cycle.</p>
           </div>
         </div>
 
-        {/* Voter input + cards */}
+        {/* Planning cards */}
         <div className="mb-6">
-          <p className="text-sm text-[#6f4e37]">Choose a book and submit your vote directly on its card.</p>
+          <p className="text-sm text-[#6f4e37]">This section is temporary copy until we reopen voting for the next book.</p>
         </div>
 
         <div className="grid md:grid-cols-4 gap-8">
           {books.map((book, index) => (
             <VoteCard key={index} book={book} />
           ))}
+        </div>
+      </section>
+
+      {/* RECOMMENDED READS */}
+      <section className="max-w-7xl mx-auto px-6 py-16">
+        <div className="grid lg:grid-cols-2 gap-10">
+          <div className="bg-white rounded-3xl shadow-xl border border-[#d8c2ab] p-10">
+            <h2 className="text-4xl font-bold mb-4">Recommend a Read</h2>
+            <p className="text-[#6f4e37] mb-8">
+              Share the books you'd like the club to consider for next month. Recommendations are saved to Supabase so the group can track them centrally.
+            </p>
+
+            <form onSubmit={handleRecommendSubmit} className="space-y-4">
+              <input
+                value={recommendTitle}
+                onChange={(e) => setRecommendTitle(e.target.value)}
+                placeholder="Book Title"
+                className="w-full px-5 py-4 rounded-2xl border border-[#d8c2ab]"
+              />
+
+              <input
+                value={recommendAuthor}
+                onChange={(e) => setRecommendAuthor(e.target.value)}
+                placeholder="Author"
+                className="w-full px-5 py-4 rounded-2xl border border-[#d8c2ab]"
+              />
+
+              <textarea
+                value={recommendNotes}
+                onChange={(e) => setRecommendNotes(e.target.value)}
+                placeholder="Why this book?"
+                rows={4}
+                className="w-full px-5 py-4 rounded-2xl border border-[#d8c2ab] resize-none"
+              />
+
+              <button
+                type="submit"
+                className="bg-[#4b2e1f] text-white px-6 py-4 rounded-2xl shadow-lg hover:bg-[#3a241a] transition"
+              >
+                Submit Recommendation
+              </button>
+            </form>
+          </div>
+
+          <div>
+            <div className="mb-6">
+              <h3 className="text-3xl font-bold mb-2">Submitted Recommendations</h3>
+              <p className="text-[#6f4e37]">
+                This list reflects the books your members want to read next.
+              </p>
+            </div>
+
+            {recommendedReads.length === 0 ? (
+              <div className="rounded-3xl border border-[#d8c2ab] bg-white p-8 shadow-lg">
+                <p className="text-[#6f4e37]">No recommendations yet. Be the first to suggest a title.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recommendedReads.map((item: any, index: number) => (
+                  <div key={index} className="rounded-3xl border border-[#d8c2ab] bg-white p-6 shadow-lg">
+                    <div className="flex items-center justify-between mb-3 gap-4">
+                      <div>
+                        <h4 className="text-xl font-bold">{item.title}</h4>
+                        <p className="italic text-sm text-[#6f4e37]">{item.author || "Unknown author"}</p>
+                      </div>
+                      {item.created_at ? (
+                        <p className="text-xs uppercase text-[#8b5e3c]">{new Date(item.created_at).toLocaleDateString()}</p>
+                      ) : null}
+                    </div>
+                    {item.notes ? <p className="text-sm text-[#5c4a33]">{item.notes}</p> : <p className="text-sm text-[#6f4e37]">No note provided.</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
