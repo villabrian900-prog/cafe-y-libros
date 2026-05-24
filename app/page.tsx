@@ -95,21 +95,18 @@ export default function CafeYLibrosWebsite() {
     }));
 
   const memberThoughts = [
-    {
-      quote:
-        "A cozy space for deep conversations, coffee, and stories that stay with you long after the last page.",
-      name: "Brian",
-    },
-    {
-      quote:
-        "Every meeting feels like a literary café adventure across New Jersey.",
-      name: "Jorge",
-    },
-    {
-      quote:
-        "The discussions here completely changed how I experience books.",
-      name: "Ross",
-    },
+    { quote: "A cozy space for deep conversations, coffee, and stories that stay with you long after the last page.", name: "Brian" },
+    { quote: "Every meeting feels like a literary café adventure across New Jersey.", name: "Jorge" },
+    { quote: "The discussions here completely changed how I experience books.", name: "Ross" },
+    { quote: "Great mix of genres and friendly faces—always something new to discover.", name: "Marta" },
+    { quote: "The conversations get deep but never pretentious. Love the vibe.", name: "Sam" },
+    { quote: "I met so many bookish friends here. Highly recommend joining.", name: "Elena" },
+    { quote: "The hosting and discussion prompts make meetings productive and fun.", name: "Carlos" },
+    { quote: "Excellent coffee and even better literary chat.", name: "Priya" },
+    { quote: "A welcoming place to share different perspectives on books.", name: "Derek" },
+    { quote: "I keep coming back for the recommendations and conversations.", name: "Lina" },
+    { quote: "Organized and thoughtful—perfect for book lovers.", name: "Mason" },
+    { quote: "Friendly community and smart discussion leaders.", name: "Aisha" },
   ];
 
   const genres = [
@@ -147,6 +144,7 @@ export default function CafeYLibrosWebsite() {
   const [recommendGenre, setRecommendGenre] = useState("");
   const [recommendNotes, setRecommendNotes] = useState("");
   const [recPage, setRecPage] = useState(0);
+  const [memberPage, setMemberPage] = useState(0);
 
   const fetchRecommendedReads = async () => {
     const { data, error } = await supabase
@@ -159,7 +157,32 @@ export default function CafeYLibrosWebsite() {
       return;
     }
 
-    setRecommendedReads(data || []);
+    // try to enrich each recommended read with a cover image from Open Library
+    const fetchCover = async (title: string | undefined, author: string | undefined) => {
+      try {
+        if (!title) return null;
+        const q = `https://openlibrary.org/search.json?title=${encodeURIComponent(
+          title
+        )}&author=${encodeURIComponent(author || "")}&limit=1`;
+        const res = await fetch(q);
+        if (!res.ok) return null;
+        const json = await res.json();
+        const doc = json?.docs && json.docs[0];
+        if (doc && doc.cover_i) return `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`;
+        return null;
+      } catch (e) {
+        return null;
+      }
+    };
+
+    const enriched = await Promise.all((data || []).map(async (item: any) => {
+      const title = item.book_title || item.title;
+      const author = item.book_author || item.author;
+      const image = await fetchCover(title, author);
+      return { ...item, image };
+    }));
+
+    setRecommendedReads(enriched || []);
   };
 
   useEffect(() => {
@@ -172,6 +195,18 @@ export default function CafeYLibrosWebsite() {
 
     fetchRecommendedReads();
   }, []);
+
+  // MEMBER THOUGHTS pagination
+  const memberPageCount = Math.max(1, Math.ceil(memberThoughts.length / 6));
+  const visibleMemberThoughts = memberThoughts.slice(memberPage * 6, memberPage * 6 + 6);
+
+  useEffect(() => {
+    if (memberThoughts.length <= 6) return;
+    const id = setInterval(() => {
+      setMemberPage((p) => (p + 1) % Math.ceil(memberThoughts.length / 6));
+    }, 30000);
+    return () => clearInterval(id);
+  }, [memberThoughts.length]);
 
   // combined recommendations (defaults first, then DB results)
   const combinedRecommendations = [...defaultRecommendedReads, ...recommendedReads];
@@ -338,7 +373,7 @@ export default function CafeYLibrosWebsite() {
                   <span className="font-semibold">Time:</span> Sunday at 1 PM
                 </p>
                 <p>
-                  <span className="font-semibold">Location:</span> Ayala Coffee, Union, NJ
+                  <span className="font-semibold">Location:</span> TBD
                 </p>
               </div>
 
@@ -629,22 +664,16 @@ export default function CafeYLibrosWebsite() {
           </h2>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {memberThoughts.map((thought, index) => (
+            {visibleMemberThoughts.map((thought, index) => (
               <div
                 key={index}
                 className="bg-white rounded-3xl p-8 shadow-lg relative"
               >
-                <div className="text-6xl absolute top-4 left-6 text-[#d7c2a8]">
-                  “
-                </div>
+                <div className="text-6xl absolute top-4 left-6 text-[#d7c2a8]">“</div>
 
-                <p className="text-lg leading-relaxed relative z-10 pt-8">
-                  {thought.quote}
-                </p>
+                <p className="text-lg leading-relaxed relative z-10 pt-8">{thought.quote}</p>
 
-                <p className="mt-6 font-bold text-[#6f4e37]">
-                  — {thought.name}
-                </p>
+                <p className="mt-6 font-bold text-[#6f4e37]">— {thought.name}</p>
               </div>
             ))}
           </div>
