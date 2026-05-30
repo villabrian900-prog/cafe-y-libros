@@ -367,10 +367,10 @@ export default function CafeYLibrosWebsite() {
                   The Hacienda
                 </p>
                 <p>
-                  <span className="font-semibold">Date:</span> June 2026
+                  <span className="font-semibold">Date:</span> June 18th, 2026
                 </p>
                 <p>
-                  <span className="font-semibold">Time:</span> Sunday at 1 PM
+                  <span className="font-semibold">Time:</span> 5:30 PM
                 </p>
                 <p>
                   <span className="font-semibold">Location:</span> Warinanco Park, Roselle, NJ — picnic outdoors
