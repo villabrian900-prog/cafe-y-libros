@@ -373,7 +373,7 @@ export default function CafeYLibrosWebsite() {
                   <span className="font-semibold">Time:</span> Sunday at 1 PM
                 </p>
                 <p>
-                  <span className="font-semibold">Location:</span> TBD
+                  <span className="font-semibold">Location:</span> Warinanco Park, Roselle, NJ — picnic outdoors
                 </p>
               </div>
 
